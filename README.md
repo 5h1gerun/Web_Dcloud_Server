@@ -53,7 +53,6 @@ Gemini が非対応の形式はテキストへ変換してから解析を行い�
 | `VAPID_PUBLIC_KEY` | Push API 用の VAPID 公開鍵 (Base64url) |
 | `DISCORD_CLIENT_ID` | Discord OAuth2 のクライアント ID |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth2 のクライアントシークレット |
-| `FORCE_HTTPS` | `1` を指定すると HTTP でのアクセスを HTTPS へリダイレクト |
 | `DISCORD_DM_UPLOAD_LIMIT` | DM 送信を許可するファイルサイズ上限 (バイト) |
 | `FILES_PER_PAGE` | ファイル一覧をページ表示する際の1ページあたりの件数。既定値 `90` |
 
@@ -121,7 +120,7 @@ Web サーバー部分は `aiohttp` を用いた非同期アプリケーショ�
 - 動画や画像をブラウザで直接表示できる `?preview=1` パラメータをダウンロードリンクに追加しました。
 - Service Worker は API などの動的リクエストを network-first で処理し、`POST` メソッドはキャッシュを利用しません。
 - ログアウト後は Service Worker のキャッシュを自動削除します。
-- `FORCE_HTTPS=1` を設定すると HTTP でアクセスした際に HTTPS へリダイレクトします。
+- HTTP でもそのまま利用でき、HTTPS への自動リダイレクトは行われません。
 - すべての HTML/JSON レスポンスを自動で Gzip/Brotli 圧縮します。
 
 ## 処理速度と最適化
