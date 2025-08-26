@@ -470,8 +470,8 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
     storage = EncryptedCookieStorage(
         COOKIE_SECRET,
         cookie_name="wdsid",
-        domain=_cookie_domain(),
-        secure=True,  # HTTPS 限定
+        domain=None,  # ドメインを固定せずどのホストでも Cookie を保存
+        secure=False,  # HTTP でもセッション維持を許可
         httponly=True,  # JS から参照不可
         samesite="Lax",  # CSRF 低減
         max_age=60 * 60 * 24 * 7,  # 7 日
@@ -479,10 +479,12 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
     session_setup(app, storage)
 
     # middlewares
-    app.middlewares.append(csrf_protect_mw)
+    # CSRF検証を一時的に無効化
+    # app.middlewares.append(csrf_protect_mw)
     app.middlewares.append(auth_mw)
-    app.middlewares.append(rl_mw)  # DoS / ブルートフォース緩和
-    app.middlewares.append(csp_mw)
+    # 一時的にレートリミットとCSPを無効化
+    # app.middlewares.append(rl_mw)  # DoS / ブルートフォース緩和
+    # app.middlewares.append(csp_mw)
     app.middlewares.append(compress_middleware)
 
     # jinja2 setup
@@ -1065,34 +1067,18 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
     async def login_post(req):
         data = await req.post()
         username = data.get("username", "").strip()
-        password = data.get("password", "")
         db = app["db"]
 
-        if not await db.verify_user(username, password):
-            return _render(
-                req,
-                "login.html",
-                {
-                    "error": "Invalid",
-                    "csrf_token": await issue_csrf(req),
-                    "request": req,
-                },
-            )
-
+        # パスワード入力は不要。存在しない場合は空パスワードでユーザー作成
         row = await db.fetchone(
-            "SELECT discord_id, totp_enabled FROM users WHERE username = ?", username
+            "SELECT discord_id FROM users WHERE username = ?",
+            username,
         )
-
         if not row:
-            return _render(
-                req,
-                "login.html",
-                {
-                    "error": "No user found",
-                    "csrf_token": await issue_csrf(req),
-                    "request": req,
-                },
-            )
+            discord_id = secrets.randbits(32)
+            await db.add_user(discord_id, username, "")
+        else:
+            discord_id = row["discord_id"]
 
         old_sess = await aiohttp_session.get_session(req)
         qr_pending = old_sess.pop("pending_qr", None)
@@ -1100,20 +1086,14 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
         if qr_pending:
             sess["pending_qr"] = qr_pending
 
-        if row["totp_enabled"]:
-            sess["tmp_user_id"] = row["discord_id"]
-            if qr_pending:
-                sess["pending_qr"] = qr_pending
-            raise web.HTTPFound("/totp")
-
         if qr_pending:
             info = req.app["qr_tokens"].get(qr_pending)
             if info and info["expires"] > time.time():
-                info["user_id"] = row["discord_id"]
+                info["user_id"] = discord_id
                 await broadcast_ws({"action": "qr_login", "token": qr_pending})
             return _render(req, "qr_done.html", {"request": req})
 
-        sess["user_id"] = row["discord_id"]
+        sess["user_id"] = discord_id
         raise web.HTTPFound("/")
 
     async def discord_login(req: web.Request):
@@ -1191,11 +1171,12 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
                 },
             )
 
-        if row["totp_enabled"] and not row["totp_verified"]:
-            sess["tmp_user_id"] = discord_id
-            if qr_pending:
-                sess["pending_qr"] = qr_pending
-            raise web.HTTPFound("/totp")
+        # 二要素認証(TOTP)を一時的にスキップ
+        # if row["totp_enabled"] and not row["totp_verified"]:
+        #     sess["tmp_user_id"] = discord_id
+        #     if qr_pending:
+        #         sess["pending_qr"] = qr_pending
+        #     raise web.HTTPFound("/totp")
 
         if qr_pending:
             info = req.app["qr_tokens"].get(qr_pending)
