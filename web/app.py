@@ -1067,17 +1067,16 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
     async def login_post(req):
         data = await req.post()
         username = data.get("username", "").strip()
-        password = data.get("password", "")
         db = app["db"]
 
-        # ユーザが存在しなければ自動作成し、パスワード検証をスキップ
+        # パスワード入力は不要。存在しない場合は空パスワードでユーザー作成
         row = await db.fetchone(
             "SELECT discord_id FROM users WHERE username = ?",
             username,
         )
         if not row:
             discord_id = secrets.randbits(32)
-            await db.add_user(discord_id, username, password)
+            await db.add_user(discord_id, username, "")
         else:
             discord_id = row["discord_id"]
 
