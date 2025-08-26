@@ -471,7 +471,7 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
         COOKIE_SECRET,
         cookie_name="wdsid",
         domain=_cookie_domain(),
-        secure=True,  # HTTPS 限定
+        secure=False,  # HTTP でもセッション維持を許可
         httponly=True,  # JS から参照不可
         samesite="Lax",  # CSRF 低減
         max_age=60 * 60 * 24 * 7,  # 7 日
@@ -482,8 +482,9 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
     # CSRF検証を一時的に無効化
     # app.middlewares.append(csrf_protect_mw)
     app.middlewares.append(auth_mw)
-    app.middlewares.append(rl_mw)  # DoS / ブルートフォース緩和
-    app.middlewares.append(csp_mw)
+    # 一時的にレートリミットとCSPを無効化
+    # app.middlewares.append(rl_mw)  # DoS / ブルートフォース緩和
+    # app.middlewares.append(csp_mw)
     app.middlewares.append(compress_middleware)
 
     # jinja2 setup
@@ -1192,11 +1193,12 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
                 },
             )
 
-        if row["totp_enabled"] and not row["totp_verified"]:
-            sess["tmp_user_id"] = discord_id
-            if qr_pending:
-                sess["pending_qr"] = qr_pending
-            raise web.HTTPFound("/totp")
+        # 二要素認証(TOTP)を一時的にスキップ
+        # if row["totp_enabled"] and not row["totp_verified"]:
+        #     sess["tmp_user_id"] = discord_id
+        #     if qr_pending:
+        #         sess["pending_qr"] = qr_pending
+        #     raise web.HTTPFound("/totp")
 
         if qr_pending:
             info = req.app["qr_tokens"].get(qr_pending)
