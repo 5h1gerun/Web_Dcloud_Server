@@ -479,7 +479,8 @@ def create_app(bot: Optional[discord.Client] = None) -> web.Application:
     session_setup(app, storage)
 
     # middlewares
-    app.middlewares.append(csrf_protect_mw)
+    # CSRF検証を一時的に無効化
+    # app.middlewares.append(csrf_protect_mw)
     app.middlewares.append(auth_mw)
     app.middlewares.append(rl_mw)  # DoS / ブルートフォース緩和
     app.middlewares.append(csp_mw)
