@@ -70,6 +70,7 @@ Web Dcloud Server の Web 部は aiohttp を利用した非同期サーバーで
 | `GDRIVE_CREDENTIALS` | Google Drive OAuth クレデンシャル |
 | `GDRIVE_TOKEN` | 認証後に生成されるトークンの保存先 |
 | `BOT_OWNER_ID` | ボット管理者の Discord ユーザー ID |
+| `FORCE_HTTPS` | `1` を指定すると HTTP から HTTPS へ自動リダイレクト |
 | `FILES_PER_PAGE` | ファイル一覧 API の1ページあたり件数。既定値 `50` |
 | `VAPID_PUBLIC_KEY` | Push API 用の VAPID 公開鍵 |
 
