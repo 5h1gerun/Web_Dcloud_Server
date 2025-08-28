@@ -177,5 +177,6 @@ python system_metrics.py
 - `docs/sequence_pwa.mmd` … PWA のシーンケース図
 - `docs/WPA.md` … 無線LAN向け WPA 規格の解説
 - `資料_nginxについて.md` … Nginx の設定例
+- `トラブルシューティング.md` … 既知の問題と対処法
 ## ライセンス
 このプロジェクトは MIT ライセンスです。
